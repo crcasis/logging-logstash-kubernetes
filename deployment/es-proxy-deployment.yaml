@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: es-proxy
+  namespace: logging
+  labels:
+    app: es-proxy
+spec:
+  selector:
+    matchLabels:
+      app: es-proxy
+  strategy:
+    type: Recreate
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: es-proxy
+      annotations:
+        fluentbit.io/exclude: "true"
+    spec:
+      volumes:
+      - name: varlog
+        emptyDir: {}
+      containers:
+      - image: crcasis/aws-es-proxy
+        imagePullPolicy: Always
+        name: es-proxy
+        env:        
+        - name: AWS_ACCESS_KEY_ID
+          value: "xxxxxxxxxxxxxx"
+        - name: AWS_SECRET_ACCESS_KEY
+          value: "xxxxxxxxxxxxxxxxxx"
+        - name: ENDPOINT
+          value: "https://xxxxxxAWS_ELASTICSEARCHxxxxxxx"
+        - name: PORT
+          value: "443"
+        command: ["/bin/sh"]
+        args: ["-c", "sleep 5; aws-es-proxy -listen es-proxy:9200 -endpoint ${ENDPOINT}"]
+        volumeMounts:
+        - name: varlog
+          mountPath: /var/log
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+      imagePullSecrets:
+      - name: staging-production-precompiled-images
