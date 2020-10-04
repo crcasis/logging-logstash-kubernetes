@@ -16,14 +16,12 @@ spec:
     metadata:
       labels:
         app: es-proxy
-      annotations:
-        fluentbit.io/exclude: "true"
     spec:
       volumes:
       - name: varlog
         emptyDir: {}
       containers:
-      - image: crcasis/aws-es-proxy
+      - image: abutaha/aws-es-proxy
         imagePullPolicy: Always
         name: es-proxy
         env:        
@@ -49,3 +47,50 @@ spec:
             cpu: "500m"
       imagePullSecrets:
       - name: staging-production-precompiled-images
+      serviceAccountName: logstash
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: es-proxy
+  namespace: logging
+  labels:
+    app: es-proxy
+spec:
+  ports:
+    - port: 9200
+      name: http-es-proxy
+  selector:
+    app: es-proxy
+  clusterIP: None
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata: 
+  name: logstash
+  namespace: logging
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: logstash-data
+  namespace: logging
+spec:
+  storageClassName: logstash-encrypted-gp2
+  accessModes:
+    - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 3Gi
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: logstash-encrypted-gp2
+provisioner: kubernetes.io/aws-ebs
+parameters:
+  type: gp2
+  fsType: ext4
+  encrypted: "true"
+
